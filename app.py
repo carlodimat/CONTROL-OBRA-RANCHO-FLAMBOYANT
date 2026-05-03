@@ -63,42 +63,41 @@ try:
         col_1, col_2 = st.columns(2)
         
         with col_1:
-            # Gráfica por TIPO con etiquetas
             st.write("#### Egresos por Tipo de Partida")
             df_tipo = df_gastos_solo.groupby('TIPO')['MONTO BASE USD'].sum().sort_values()
             fig1, ax1 = plt.subplots()
             bars1 = ax1.barh(df_tipo.index, df_tipo.values, color='#ff9999')
-            ax1.bar_label(bars1, padding=3, fmt='$%1.0f', fontweight='bold') # ETIQUETAS
+            ax1.bar_label(bars1, padding=3, fmt='$%1.0f', fontweight='bold')
             ax1.set_xlabel("Monto USD")
             st.pyplot(fig1)
 
-            # Gráfica por ÁREA con etiquetas
             st.write("#### Egresos por Área de la Obra")
             df_area = df_gastos_solo.groupby('AREA')['MONTO BASE USD'].sum().sort_values()
             fig2, ax2 = plt.subplots()
             bars2 = ax2.barh(df_area.index, df_area.values, color='#ffcc99')
-            ax2.bar_label(bars2, padding=3, fmt='$%1.0f', fontweight='bold') # ETIQUETAS
+            ax2.bar_label(bars2, padding=3, fmt='$%1.0f', fontweight='bold')
             ax2.set_xlabel("Monto USD")
             st.pyplot(fig2)
 
         with col_2:
-            # Gráfica por PROVEEDOR con etiquetas
             st.write("#### Top Proveedores por Monto")
             df_prov = df_gastos_solo.groupby('PROVEEDOR')['MONTO BASE USD'].sum().sort_values(ascending=False).head(15)
             fig3, ax3 = plt.subplots(figsize=(10, 11))
-            bars3 = ax3.barh(df_prov.index[::-1], df_prov.values[::-1], color='#d3d3d3') # Invertido para que el mayor esté arriba
-            ax3.bar_label(bars3, padding=3, fmt='$%1.0f', fontweight='bold') # ETIQUETAS
+            bars3 = ax3.barh(df_prov.index[::-1], df_prov.values[::-1], color='#d3d3d3')
+            ax3.bar_label(bars3, padding=3, fmt='$%1.0f', fontweight='bold')
             ax3.set_xlabel("Monto USD")
             st.pyplot(fig3)
 
     with tab_ingresos:
         st.write("### Detalle de Ingresos (Abonos)")
-        listado_ing = df_ingresos_solo[['FECHA', 'PROVEEDOR', 'DESCRIPCION', 'MONTO BASE USD']].sort_values('FECHA', ascending=False)
+        # SE AÑADE 'FORMA DE PAGO'
+        listado_ing = df_ingresos_solo[['FECHA', 'PROVEEDOR', 'DESCRIPCION', 'FORMA DE PAGO', 'MONTO BASE USD']].sort_values('FECHA', ascending=False)
         st.dataframe(listado_ing, use_container_width=True)
 
     with tab_egresos:
         st.write("### Detalle Completo de Egresos")
-        listado_gas = df_gastos_solo[['FECHA', 'AREA', 'TIPO', 'PROVEEDOR', 'DESCRIPCION', 'MONTO BASE USD']].sort_values('FECHA', ascending=False)
+        # SE AÑADE 'FORMA DE PAGO'
+        listado_gas = df_gastos_solo[['FECHA', 'AREA', 'TIPO', 'PROVEEDOR', 'DESCRIPCION', 'FORMA DE PAGO', 'MONTO BASE USD']].sort_values('FECHA', ascending=False)
         st.dataframe(listado_gas, use_container_width=True)
 
     with tab_buscador:
