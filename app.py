@@ -67,7 +67,7 @@ try:
             df_tipo = df_gastos_solo.groupby('TIPO')['MONTO BASE USD'].sum().sort_values()
             fig1, ax1 = plt.subplots()
             bars1 = ax1.barh(df_tipo.index, df_tipo.values, color='#ff9999')
-            ax1.bar_label(bars1, padding=3, fmt='$%1.0f', fontweight='bold')
+            ax1.bar_label(bars1, padding=3, fmt='$%1,.2f', fontweight='bold') # Formato de miles y decimales
             ax1.set_xlabel("Monto USD")
             st.pyplot(fig1)
 
@@ -75,7 +75,7 @@ try:
             df_area = df_gastos_solo.groupby('AREA')['MONTO BASE USD'].sum().sort_values()
             fig2, ax2 = plt.subplots()
             bars2 = ax2.barh(df_area.index, df_area.values, color='#ffcc99')
-            ax2.bar_label(bars2, padding=3, fmt='$%1.0f', fontweight='bold')
+            ax2.bar_label(bars2, padding=3, fmt='$%1,.2f', fontweight='bold') # Formato de miles y decimales
             ax2.set_xlabel("Monto USD")
             st.pyplot(fig2)
 
@@ -84,30 +84,32 @@ try:
             df_prov = df_gastos_solo.groupby('PROVEEDOR')['MONTO BASE USD'].sum().sort_values(ascending=False).head(15)
             fig3, ax3 = plt.subplots(figsize=(10, 11))
             bars3 = ax3.barh(df_prov.index[::-1], df_prov.values[::-1], color='#d3d3d3')
-            ax3.bar_label(bars3, padding=3, fmt='$%1.0f', fontweight='bold')
+            ax3.bar_label(bars3, padding=3, fmt='$%1,.2f', fontweight='bold') # Formato de miles y decimales
             ax3.set_xlabel("Monto USD")
             st.pyplot(fig3)
 
     with tab_ingresos:
         st.write("### Detalle de Ingresos (Abonos)")
-        # SE AÑADE 'FORMA DE PAGO'
         listado_ing = df_ingresos_solo[['FECHA', 'PROVEEDOR', 'DESCRIPCION', 'FORMA DE PAGO', 'MONTO BASE USD']].sort_values('FECHA', ascending=False)
-        st.dataframe(listado_ing, use_container_width=True)
+        # Aplicar formato a la tabla
+        st.dataframe(listado_ing.style.format({"MONTO BASE USD": "{:,.2f}"}), use_container_width=True)
 
     with tab_egresos:
         st.write("### Detalle Completo de Egresos")
-        # SE AÑADE 'FORMA DE PAGO'
         listado_gas = df_gastos_solo[['FECHA', 'AREA', 'TIPO', 'PROVEEDOR', 'DESCRIPCION', 'FORMA DE PAGO', 'MONTO BASE USD']].sort_values('FECHA', ascending=False)
-        st.dataframe(listado_gas, use_container_width=True)
+        # Aplicar formato a la tabla
+        st.dataframe(listado_gas.style.format({"MONTO BASE USD": "{:,.2f}"}), use_container_width=True)
 
     with tab_buscador:
         st.write("### Buscador Global")
         texto_buscar = st.text_input("Buscar cualquier dato:")
         if texto_buscar:
             df_busqueda = df[df.apply(lambda row: texto_buscar.lower() in row.astype(str).str.lower().values, axis=1)]
-            st.dataframe(df_busqueda, use_container_width=True)
+            # Formatear solo si la columna existe en el resultado de búsqueda
+            if "MONTO BASE USD" in df_busqueda.columns:
+                st.dataframe(df_busqueda.style.format({"MONTO BASE USD": "{:,.2f}"}), use_container_width=True)
+            else:
+                st.dataframe(df_busqueda, use_container_width=True)
 
 except Exception as e:
     st.error(f"Error: {e}")
-    st.error(f"Error técnico al cargar el sistema: {e}")
-    st.info("Revisa que el archivo 'RANCHO.csv' esté subido correctamente a GitHub.")
