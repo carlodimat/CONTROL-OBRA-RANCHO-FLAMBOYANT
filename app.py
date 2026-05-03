@@ -12,7 +12,7 @@ st.subheader('DIMAQUINAS C.A.')
 @st.cache_data
 def load_data():
     # Cargamos el CSV (Streamlit lo buscará en tu repositorio de GitHub)
-    df = pd.read_csv("DIMAQUINAS_C.A._RANCHO_FLAMBOYANT.csv")
+    df = pd.read_csv("RANCHO.csv")
     
     # Convertimos la fecha a formato datetime
     df['FECHA'] = pd.to_datetime(df['FECHA'])
