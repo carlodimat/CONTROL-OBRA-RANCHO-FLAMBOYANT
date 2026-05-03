@@ -10,7 +10,7 @@ st.subheader('DIMAQUINAS C.A.')
 @st.cache_data
 def load_data():
     # Asegúrate de que este nombre sea exacto al que tienes en GitHub
-    df = pd.read_csv("DIMAQUINAS_C.A._RANCHO_FLAMBOYANT.csv")
+    df = pd.read_csv("RANCHO.csv")
     df['FECHA'] = pd.to_datetime(df['FECHA'])
     cols_num = ['MONTO BASE USD', 'MONTO PAGADO', 'SALDO PENDIENTE', 'COSTO TOTAL']
     for col in cols_num:
