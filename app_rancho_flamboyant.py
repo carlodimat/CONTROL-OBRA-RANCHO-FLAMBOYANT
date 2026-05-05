@@ -94,11 +94,16 @@ if df is not None:
 
     # --- CÁLCULOS ---
     total_ing        = df_ingresos['MONTO BASE USD'].sum()
-    total_neto       = df_gastos['MONTO BASE USD'].sum()
-    total_honorarios = df_gastos['HONORARIOS'].sum()
-    # Gasto real total = neto + honorarios AD (fuente única de verdad para todo el dashboard)
-    gasto_total_real = total_neto + total_honorarios
-    saldo_caja       = total_ing - gasto_total_real
+    total_neto       = df_gastos['MONTO BASE USD'].sum()          # filtrado (para filter_summary)
+    total_honorarios = df_gastos['HONORARIOS'].sum()              # filtrado (para filter_summary)
+    gasto_total_real = total_neto + total_honorarios              # filtrado (para filter_summary)
+    saldo_caja       = total_ing - gasto_total_real               # filtrado (para filter_summary)
+
+    # Totales REALES sin filtrar — se usan en las métricas fijas de arriba y el resumen del gráfico
+    _hon_base       = df_gastos_base['HONORARIOS'].sum() if 'HONORARIOS' in df_gastos_base.columns else 0
+    neto_base       = df_gastos_base['MONTO BASE USD'].sum()
+    gasto_base_real = neto_base + _hon_base
+    saldo_base_real = total_ing - gasto_base_real
 
     # --- ENCABEZADO ---
     st.markdown(
@@ -109,12 +114,12 @@ if df is not None:
         unsafe_allow_html=True
     )
 
-    # --- MÉTRICAS ---
+    # --- MÉTRICAS (siempre valores reales del proyecto, sin filtrar) ---
     m1, m2, m3, m4 = st.columns(4)
-    m1.metric("TOTAL INGRESOS",  f"$ {total_ing:,.2f}")
-    m2.metric("NETO FILTRADO",   f"$ {total_neto:,.2f}")
-    m3.metric("ADMIN. FILTRADA", f"$ {total_honorarios:,.2f}")
-    m4.metric("SALDO CAJA",      f"$ {saldo_caja:,.2f}")
+    m1.metric("TOTAL INGRESOS",   f"$ {total_ing:,.2f}")
+    m2.metric("GASTOS NETOS",     f"$ {neto_base:,.2f}")
+    m3.metric("ADMIN. DELEGADA",  f"$ {_hon_base:,.2f}")
+    m4.metric("SALDO REAL",       f"$ {saldo_base_real:,.2f}")
 
     st.divider()
 
@@ -175,12 +180,18 @@ if df is not None:
         if filtro_activo:
             n   = len(df_filtrado)
             tot = df_filtrado['MONTO BASE USD'].sum()
-            st.caption(
-                f"🔍 Filtro activo — **{label_filtro}**: {n} registro{'s' if n != 1 else ''} · "
-                f"Subtotal neto: **$ {tot:,.2f}** · "
-                f"+ Admin. Delegada: **$ {total_honorarios:,.2f}** · "
-                f"Total real: **$ {tot + total_honorarios:,.2f}**"
+            st.markdown(
+                f"""<div style='background:#e8f0fe;border-left:5px solid #1e3a8a;
+                padding:10px 16px;border-radius:6px;margin-top:4px;font-size:1rem;'>
+                🔍 <b>Filtro activo — {label_filtro}:</b> &nbsp;
+                {n} registro{'s' if n != 1 else ''} &nbsp;|
+                Subtotal neto: <b>$ {tot:,.2f}</b> &nbsp;|
+                + Admin. Delegada: <b>$ {total_honorarios:,.2f}</b> &nbsp;|
+                Total real: <b>$ {tot + total_honorarios:,.2f}</b>
+                </div>""",
+                unsafe_allow_html=True
             )
+
 
     with t1:
         # ── 1. Por TIPO ──────────────────────────────────────
@@ -305,12 +316,16 @@ if df is not None:
             )
             st.plotly_chart(fig_time, use_container_width=True)
 
-            # Mini resumen (mismas variables que las métricas de arriba → siempre coinciden)
-            color_sal = "🟢" if saldo_caja >= 0 else "🔴"
-            c1, c2, c3 = st.columns(3)
-            c1.metric("Ingresos Acumulados",       f"$ {total_ing:,.2f}")
-            c2.metric("Gastos + Admin. Acumulados", f"$ {gasto_total_real:,.2f}")
-            c3.metric(f"{color_sal} Saldo Neto",    f"$ {saldo_caja:,.2f}")
+            # Mini resumen debajo del gráfico — 4 columnas, siempre sin filtrar
+            color_sal_base = "🟢" if saldo_base_real >= 0 else "🔴"
+            b1, b2, b3, b4 = st.columns(4)
+            b1.metric("Ingresos Totales",   f"$ {total_ing:,.2f}")
+            b2.metric("Gastos Netos",       f"$ {neto_base:,.2f}")
+            b3.metric("Admin. Delegada",    f"$ {_hon_base:,.2f}")
+            b4.metric(f"{color_sal_base} Saldo Real", f"$ {saldo_base_real:,.2f}")
+            if filtro_activo:
+                st.caption("⚠️ Valores del proyecto completo (sin filtros). "
+                           "El detalle filtrado se muestra debajo de cada gráfico.")
 
     with t2:
         st.subheader("📝 Detalle de Gastos")
@@ -333,11 +348,18 @@ if df is not None:
 
     with t4:
         st.subheader("🔍 Buscador")
-        q = st.text_input("Escriba una palabra para buscar en todos los campos:")
+        q = st.text_input("Escriba una palabra exacta para buscar en todos los campos:")
         if q:
-            mask = df.apply(lambda r: r.astype(str).str.contains(q, case=False).any(), axis=1)
-            res  = df[mask]
-            st.success(f"Registros encontrados: {len(res)} | Total: $ {res['MONTO BASE USD'].sum():,.2f}")
+            import re
+            # Búsqueda por palabra exacta con límites de palabra (\b)
+            # Así 'Bar' no coincide con 'Barbiquiu'
+            pattern = r'\b' + re.escape(q) + r'\b'
+            mask = df.apply(
+                lambda r: r.astype(str).str.contains(pattern, case=False, regex=True).any(), axis=1
+            )
+            res = df[mask]
+            st.success(f"🔍 **{len(res)}** registro{'s' if len(res) != 1 else ''} encontrado{'s' if len(res) != 1 else ''} "
+                       f"con la palabra exacta **‘{q}’** | Total: **$ {res['MONTO BASE USD'].sum():,.2f}**")
             fmt_res = {c: "${:,.2f}" for c in ['MONTO BASE USD', 'COSTO TOTAL', 'HONORARIOS'] if c in res.columns}
             fmt_res.update({c: "{:,.2f}" for c in ['MONTO ORIG', 'TASA'] if c in res.columns})
             st.dataframe(res.style.format(fmt_res), use_container_width=True)
