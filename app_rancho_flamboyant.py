@@ -2,10 +2,9 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from fpdf import FPDF
 import io
 
-# 1. CONFIGURACIÓN DE PÁGINA
+# 1. CONFIGURACION DE PAGINA
 st.set_page_config(page_title="DIMAQUINAS C.A. - RANCHO FLAMBOYANT", layout="wide", page_icon="🏗️")
 
 # 2. DISEÑO CSS
@@ -28,7 +27,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# ─── Función para envolver texto en ejes (usando \n para Plotly) ───
+# Funcion para envolver texto en ejes
 def wrap_label(text, width=18):
     if not isinstance(text, str): return str(text)
     words = text.split()
@@ -41,48 +40,12 @@ def wrap_label(text, width=18):
     if current: lines.append(" ".join(current))
     return "<br>".join(lines)
 
-def create_pdf(df_report, title_report, totals_info=""):
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("helvetica", "B", 16)
-    
-    # Encabezado
-    pdf.cell(190, 10, title_report, ln=True, align='C')
-    pdf.set_font("helvetica", "", 10)
-    pdf.cell(190, 10, f"Generado el: {pd.Timestamp.today().strftime('%d/%m/%Y %H:%M')}", ln=True, align='C')
-    
-    if totals_info:
-        pdf.set_font("helvetica", "B", 10)
-        pdf.multi_cell(190, 10, totals_info)
-        pdf.ln(5)
-
-    # Tabla
-    pdf.set_font("helvetica", "B", 8)
-
-    cols = [c for c in ['FECHA', 'PROVEEDOR', 'DESCRIPCION', 'MONTO ORIG', 'HONORARIOS', 'COSTO TOTAL'] if c in df_report.columns]
-    widths = [20, 35, 65, 25, 20, 25]
-    for i, col in enumerate(cols):
-        pdf.cell(widths[i], 8, col, border=1, align='C')
-    pdf.ln()
-    pdf.set_font("helvetica", "", 7)
-    for _, row in df_report.iterrows():
-        for i, col in enumerate(cols):
-            val = str(row[col])
-            if 'MONTO' in col or 'HONORARIOS' in col or 'COSTO' in col:
-                try: val = f"{float(row[col]):,.2f}"
-                except: pass
-            elif 'FECHA' in col:
-                try: val = row[col].strftime('%d/%m/%Y')
-                except: pass
-            
-            # Sanitizar texto
-            val = val.encode('latin-1', 'replace').decode('latin-1')
-            
-            if col == 'DESCRIPCION' and len(val) > 45: val = val[:42] + "..."
-            pdf.cell(widths[i], 7, val, border=1)
-        pdf.ln()
-    return bytes(pdf.output())
-
+def create_excel(df_report):
+    """Genera un archivo Excel en memoria."""
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df_report.to_excel(writer, index=False, sheet_name='Reporte')
+    return output.getvalue()
 
 def load_all_data():
     csv_options = ["RANCHO.csv", "DIMAQUINAS C.A._RANCHO FLAMBOYANT (3).csv", "DIMAQUINAS_C.A._RANCHO_FLAMBOYANT.csv"]
@@ -151,29 +114,15 @@ if df is not None:
             st.markdown(f"<div style='background:#e8f0fe;border-left:5px solid #1e3a8a;padding:10px 16px;border-radius:6px;margin-top:4px;'>🔍 <b>Filtro activo &mdash; {label_filtro}:</b> {n} registros | Subtotal: <b>$ {tot:,.2f}</b> | Total Real: <b>$ {tot + total_honorarios:,.2f}</b></div>", unsafe_allow_html=True)
 
     with t1:
-        st.write("### 📌 Inversión por Tipo")
+        st.write("### 📌 Inversion por Tipo")
         df_t = df_gastos.groupby('TIPO')['MONTO BASE USD'].sum().reset_index()
         df_t = pd.concat([df_t, pd.DataFrame({'TIPO': ['ADMINISTRACION DELEGADA'], 'MONTO BASE USD': [total_honorarios]})], ignore_index=True)
-        horizontal_bar_chart(df_t, 'MONTO BASE USD', 'TIPO', 'Viridis', '📌 Inversión total por Tipo de Gasto', height=max(350, len(df_t)*45))
+        horizontal_bar_chart(df_t, 'MONTO BASE USD', 'TIPO', 'Viridis', '📌 Inversion total por Tipo de Gasto', height=max(350, len(df_t)*45))
         filter_summary(df_gastos, "Tipo")
         st.divider()
 
-        st.write("### 📐 Inversión por Área")
-        df_a = df_gastos.groupby('AREA')['MONTO BASE USD'].sum().reset_index()
-        df_a = pd.concat([df_a, pd.DataFrame({'AREA': ['ADMINISTRACION DELEGADA'], 'MONTO BASE USD': [total_honorarios]})], ignore_index=True)
-        horizontal_bar_chart(df_a, 'MONTO BASE USD', 'AREA', 'Blues', '📐 Inversión total por Área de Obra', height=max(400, len(df_a)*42))
-        filter_summary(df_gastos, "Área")
-        st.divider()
-
-        st.write("### 👥 Top Proveedores")
-        df_p = df_gastos.groupby('PROVEEDOR')['MONTO BASE USD'].sum().sort_values(ascending=False).head(20).reset_index()
-        df_p = pd.concat([df_p, pd.DataFrame({'PROVEEDOR': ['ADMINISTRACION DELEGADA'], 'MONTO BASE USD': [total_honorarios]})], ignore_index=True)
-        horizontal_bar_chart(df_p, 'MONTO BASE USD', 'PROVEEDOR', 'Reds', '👥 Top 20 Proveedores por Gasto', height=max(500, len(df_p)*40))
-        filter_summary(df_gastos, "Proveedor")
-        st.divider()
-
-        st.write("### 📅 Evolución Acumulativa")
-        freq_sel = st.radio("Agrupación:", options=["📅 Mensual", "🗓️ Semanal"], horizontal=True, key="freq_time")
+        st.write("### 📅 Evolucion Acumulativa")
+        freq_sel = st.radio("Agrupacion:", options=["📅 Mensual", "🗓️ Semanal"], horizontal=True, key="freq_time")
         freq_code = "ME" if freq_sel == "📅 Mensual" else "W"
         fecha_inicio = df_ingresos['FECHA'].min() if not df_ingresos.empty else df_gastos_base['FECHA'].min()
         fecha_hoy = pd.Timestamp.today().normalize()
@@ -193,12 +142,6 @@ if df is not None:
             fig_time.update_layout(height=420, hovermode='x unified', margin=dict(l=10, r=20, t=40, b=30))
             st.plotly_chart(fig_time, use_container_width=True)
 
-            b1, b2, b3, b4 = st.columns(4)
-            b1.metric("Ingresos Totales", f"$ {total_ing:,.2f}")
-            b2.metric("Gastos Netos", f"$ {neto_base:,.2f}")
-            b3.metric("Admin. Delegada", f"$ {_hon_base:,.2f}")
-            b4.metric("Saldo Real", f"$ {saldo_base_real:,.2f}")
-
     with t2:
         st.subheader("📝 Detalle de Gastos")
         st.info(f"📋 **{len(df_gastos)}** movimientos - Total Neto: **$ {total_neto:,.2f}**")
@@ -207,15 +150,28 @@ if df is not None:
         fmt.update({c: "{:,.2f}" for c in ['MONTO ORIG', '% ADMIN'] if c in cols_show})
         st.dataframe(df_gastos[cols_show].sort_values('FECHA', ascending=False).style.format(fmt), use_container_width=True)
         
-        pdf_data = create_pdf(df_gastos.sort_values('FECHA', ascending=False), f"REPORTE DE EGRESOS - {obra}", f"Total Real: $ {gasto_total_real:,.2f}")
-        st.download_button(label="📄 Descargar Egresos en PDF", data=pdf_data, file_name=f"Egresos_{obra}.pdf", mime="application/pdf")
+        # Botón de Excel para Egresos
+        excel_data = create_excel(df_gastos[cols_show].sort_values('FECHA', ascending=False))
+        st.download_button(
+            label="📊 Descargar Reporte Egresos (Excel)",
+            data=excel_data,
+            file_name=f"Egresos_{obra}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
 
     with t3:
         st.subheader("💰 Detalle de Ingresos")
         st.success(f"💵 **{len(df_ingresos)}** ingresos - Total: **$ {total_ing:,.2f}**")
         st.dataframe(df_ingresos[['FECHA', 'PROVEEDOR', 'MONTO BASE USD']].sort_values('FECHA', ascending=False).style.format({"MONTO BASE USD": "${:,.2f}"}), use_container_width=True)
-        pdf_ing = create_pdf(df_ingresos.sort_values('FECHA', ascending=False), f"REPORTE DE INGRESOS - {obra}", f"Total Ingresos: $ {total_ing:,.2f}")
-        st.download_button(label="📄 Descargar Ingresos en PDF", data=pdf_ing, file_name=f"Ingresos_{obra}.pdf", mime="application/pdf")
+        
+        # Botón de Excel para Ingresos
+        excel_ing = create_excel(df_ingresos[['FECHA', 'PROVEEDOR', 'MONTO BASE USD']].sort_values('FECHA', ascending=False))
+        st.download_button(
+            label="📊 Descargar Reporte Ingresos (Excel)",
+            data=excel_ing,
+            file_name=f"Ingresos_{obra}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
 
     with t4:
         st.subheader("🔍 Buscador por Descripción")
