@@ -44,21 +44,27 @@ def wrap_label(text, width=18):
 def create_pdf(df_report, title_report, totals_info=""):
     pdf = FPDF()
     pdf.add_page()
-    pdf.set_font("Arial", "B", 16)
+    pdf.set_font("helvetica", "B", 16)
+    
+    # Encabezado
     pdf.cell(190, 10, title_report, ln=True, align='C')
-    pdf.set_font("Arial", "", 10)
+    pdf.set_font("helvetica", "", 10)
     pdf.cell(190, 10, f"Generado el: {pd.Timestamp.today().strftime('%d/%m/%Y %H:%M')}", ln=True, align='C')
+    
     if totals_info:
-        pdf.set_font("Arial", "B", 10)
+        pdf.set_font("helvetica", "B", 10)
         pdf.multi_cell(190, 10, totals_info)
         pdf.ln(5)
-    pdf.set_font("Arial", "B", 8)
+
+    # Tabla
+    pdf.set_font("helvetica", "B", 8)
+
     cols = [c for c in ['FECHA', 'PROVEEDOR', 'DESCRIPCION', 'MONTO ORIG', 'HONORARIOS', 'COSTO TOTAL'] if c in df_report.columns]
     widths = [20, 35, 65, 25, 20, 25]
     for i, col in enumerate(cols):
         pdf.cell(widths[i], 8, col, border=1, align='C')
     pdf.ln()
-    pdf.set_font("Arial", "", 7)
+    pdf.set_font("helvetica", "", 7)
     for _, row in df_report.iterrows():
         for i, col in enumerate(cols):
             val = str(row[col])
