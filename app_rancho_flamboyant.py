@@ -84,7 +84,7 @@ def create_pdf(df_report, title_report, totals_info=""):
             if col == 'DESCRIPCION' and len(val) > 45: val = val[:42] + "..."
             pdf.cell(widths[i], 7, val, border=1)
         pdf.ln()
-    return pdf.output()
+    return bytes(pdf.output())
 
 def load_all_data():
     csv_options = ["RANCHO.csv", "DIMAQUINAS C.A._RANCHO FLAMBOYANT (3).csv", "DIMAQUINAS_C.A._RANCHO_FLAMBOYANT.csv"]
