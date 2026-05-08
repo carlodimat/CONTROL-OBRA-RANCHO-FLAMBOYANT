@@ -87,6 +87,9 @@ if df is not None:
     areas_sel = st.sidebar.multiselect("Filtrar por ÁREA:",      options=sorted(df_gastos_base['AREA'].unique()))
     prov_sel  = st.sidebar.multiselect("Filtrar por PROVEEDOR:", options=sorted(df_gastos_base['PROVEEDOR'].unique()))
 
+    # Determinar si hay algún filtro activo
+    filtro_activo = bool(tipos_sel or areas_sel or prov_sel)
+
     # Aplicar filtros
     df_gastos = df_gastos_base.copy()
     if tipos_sel: df_gastos = df_gastos[df_gastos['TIPO'].isin(tipos_sel)]
@@ -207,7 +210,6 @@ if df is not None:
     # ──────────────────────────────────────────────────────────
     t1, t2, t3, t4 = st.tabs(["📊 GRÁFICOS", "💸 EGRESOS", "💰 INGRESOS", "🔍 BUSCADOR"])
 
-    filtro_activo = bool(tipos_sel or areas_sel or prov_sel)
     def filter_summary(df_filtrado, label_filtro):
         if filtro_activo:
             n   = len(df_filtrado)
